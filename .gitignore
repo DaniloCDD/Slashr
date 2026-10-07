@@ -1,0 +1,6 @@
+target/
+.idea/
+*.iml
+.env
+*.db
+application-local.yml
