@@ -1,37 +1,37 @@
 package com.slashr.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
+
+import java.util.Map;
 
 @Service
 public class TelegramService {
 
     private final RestClient restClient;
 
-    @Value("${telegram.bot.token}")
-    private String token;
-
-    public TelegramService() {
-        this.restClient = RestClient.create();
+    public TelegramService(RestClient.Builder builder, @Value("${TELEGRAM_BOT_TOKEN}") String token) {
+        this.restClient = builder
+                .baseUrl("https://api.telegram.org/bot" + token)
+                .build();
     }
 
-    public String getMe() {
-
-        String url = "https://api.telegram.org/bot" + token + "/getMe";
-
+    public JsonNode getUpdates(long offset) {
         return restClient.get()
-                .uri(url)
+                .uri("/getUpdates?offset={offset}&timeout={timeout}", offset, 30)
                 .retrieve()
-                .body(String.class);
+                .body(JsonNode.class);
     }
-    public String getUpdates() {
 
-        String url = "https://api.telegram.org/bot" + token + "/getUpdates";
-
-        return restClient.get()
-                .uri(url)
+    public void sendMessage(String chatId, String text) {
+        restClient.post()
+                .uri("/sendMessage")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(Map.of("chat_id", chatId, "text", text))
                 .retrieve()
-                .body(String.class);
+                .toBodilessEntity();
     }
 }
