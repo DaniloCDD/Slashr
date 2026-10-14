@@ -13,7 +13,7 @@ public class TelegramService {
 
     private final RestClient restClient;
 
-    public TelegramService(RestClient.Builder builder, @Value("${TELEGRAM_BOT_TOKEN}") String token) {
+    public TelegramService(RestClient.Builder builder, @Value("${telegram.bot.token}") String token) {
         this.restClient = builder
                 .baseUrl("https://api.telegram.org/bot" + token)
                 .build();
