@@ -7,6 +7,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestClientResponseException;
 
 @RequiredArgsConstructor
 @Component
@@ -31,8 +33,12 @@ public class TelegramBot {
                 lastUpdateId = update.path("update_id").asLong();
                 handleUpdate(update);
             }
+        } catch (RestClientResponseException e) {
+            log.error("Telegram respondeu {}", e.getStatusCode());
+        }catch (RestClientException e) {
+            log.error("Falha de rede ao falar com o Telegram ({})", e.getClass().getSimpleName());
         } catch (Exception e) {
-            log.error("Erro ao buscar atualizações do Telegram", e);
+            log.error("Erro inesperado no bot", e);
         }
     }
 

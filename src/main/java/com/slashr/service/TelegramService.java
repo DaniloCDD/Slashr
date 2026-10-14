@@ -3,9 +3,11 @@ package com.slashr.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
+import java.time.Duration;
 import java.util.Map;
 
 @Service
@@ -14,9 +16,10 @@ public class TelegramService {
     private final RestClient restClient;
 
     public TelegramService(RestClient.Builder builder, @Value("${telegram.bot.token}") String token) {
-        this.restClient = builder
-                .baseUrl("https://api.telegram.org/bot" + token)
-                .build();
+        var factory = new JdkClientHttpRequestFactory();
+        factory.setReadTimeout(Duration.ofSeconds(40));
+        this.restClient = builder.baseUrl("https://api.telegram.org/bot" + token)
+                .requestFactory(factory).build();
     }
 
     public JsonNode getUpdates(long offset) {
