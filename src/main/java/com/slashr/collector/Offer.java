@@ -10,8 +10,13 @@ import java.math.BigDecimal;
 * tem que ser o link da ITAD exato
 *
 * o dinheiro precisa ser BigDecimal, pq se for double ele arredonda
-* */
+*/
 public record Offer(String gameId, String nomeJogo,
                     BigDecimal preco, BigDecimal precoNormal,
                     String moeda, int desconto, String url)
-{}
+{
+    //a API de preços do ITAD nao devolve o nome do jogo, então quem chamar essa função vai receber o nome do banco
+    public Offer comNome(String nome) {
+        return new Offer(gameId, nome, preco, precoNormal, moeda, desconto, url);
+    }
+}
