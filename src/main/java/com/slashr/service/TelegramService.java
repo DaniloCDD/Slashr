@@ -90,4 +90,15 @@ public class TelegramService {
                 .body(Map.of("chat_id", chatId, "message_id", messageId, "text", text))
                 .retrieve().toBodilessEntity();
     }
+
+    public void sendHtml(String chatId, String html) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("chat_id", chatId);
+        body.put("text", html);
+        body.put("parse_mode", "HTML");
+        body.put("link_preview_options", Map.of("is_disabled", true));
+        restClient.post().uri("/sendMessage")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(body).retrieve().toBodilessEntity();
+    }
 }

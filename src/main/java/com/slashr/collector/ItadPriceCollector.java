@@ -29,7 +29,6 @@ public class ItadPriceCollector implements PriceCollector {
     private static final int LOTE = 200;
 
     private final RestClient http;
-    private final String apiKey;
     private final String pais;
     private final int lojaSteam;
 
@@ -40,8 +39,9 @@ public class ItadPriceCollector implements PriceCollector {
         var client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
         var factory = new JdkClientHttpRequestFactory(client);
         factory.setReadTimeout(Duration.ofSeconds(20));
-        this.http = builder.baseUrl(BASE_URL).requestFactory(factory).build();
-        this.apiKey = apiKey;
+        this.http = builder.baseUrl(BASE_URL)
+                .defaultHeader("ITAD-API-Key", apiKey)
+                .requestFactory(factory).build();
         this.pais = pais;
         this.lojaSteam = lojaSteam;
     }
@@ -53,7 +53,6 @@ public class ItadPriceCollector implements PriceCollector {
         }
         JsonNode root = executa(() -> http.get()
                 .uri(b -> b.path("/games/search/v1")
-                        .queryParam("key", apiKey)
                         .queryParam("title", nomeJogo.trim())
                         .queryParam("results", MAX_BUSCA)
                         .build())
@@ -68,7 +67,6 @@ public class ItadPriceCollector implements PriceCollector {
         for (List<String> lote : lotes(gameIds)) {
             JsonNode root = executa(() -> http.post()
                     .uri(b -> b.path("/games/prices/v3")
-                            .queryParam("key", apiKey)
                             .queryParam("country", pais)
                             .queryParam("shops", lojaSteam)
                             .queryParam("deals", false)
@@ -88,7 +86,6 @@ public class ItadPriceCollector implements PriceCollector {
         for (List<String> lote : lotes(gameIds)) {
             JsonNode root = executa(() -> http.post()
                     .uri(b -> b.path("/games/storelow/v2")
-                            .queryParam("key", apiKey)
                             .queryParam("country", pais)
                             .queryParam("shops", lojaSteam)
                             .build())
