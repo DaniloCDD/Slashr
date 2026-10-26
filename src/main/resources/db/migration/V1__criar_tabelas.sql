@@ -1,7 +1,7 @@
 CREATE TABLE games (
     id            BIGSERIAL    PRIMARY KEY,
     itad_id       VARCHAR(36)  NOT NULL UNIQUE,
-    title         VARCHAR(255) NOT NULL,
+    title         VARCHAR(255) NOT NULL
 );
 
 CREATE TABLE price_alerts (
