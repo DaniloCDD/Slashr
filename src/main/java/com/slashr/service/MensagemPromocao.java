@@ -11,6 +11,7 @@ import java.util.Locale;
 import java.util.Optional;
 
 
+//só a formatação das msgs do bot
 public final class MensagemPromocao {
 
     private static final Locale PT_BR = Locale.of("pt", "BR");

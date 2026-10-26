@@ -3,6 +3,7 @@ package com.slashr.service;
 import java.math.BigDecimal;
 import java.util.Optional;
 
+//é a classe que calcula qual veredito o bot irá usar
 public final class CalculadoraVeredito {
 
     static final BigDecimal LIMITE_COMPRE = new BigDecimal("1.05");
