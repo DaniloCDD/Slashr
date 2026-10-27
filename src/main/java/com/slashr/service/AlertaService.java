@@ -9,6 +9,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+import java.util.Optional;
+
 /*
  * Grava o "quero acompanhar este jogo" vindo do clique no /add.
  * Idempotente: clique duplo ou update reprocessado não duplica nada (a restrição única do banco é a garantia final).
@@ -64,4 +67,19 @@ public class AlertaService {
             }
         });
     }
+
+    public List<GameMatch> alertasDaPessoa(long chatId, long userId) {
+        return alertRepository.findDaPessoa(chatId, userId).stream()
+                .map(a -> new GameMatch(a.getGame().getItadId(), a.getGame().getTitle()))
+                .toList();
+    }
+
+    public boolean remove(long chatId, long userId, String itadId) {
+        return alertRepository.removeAlerta(chatId, userId, itadId) > 0;
+    }
+
+    public Optional<String> tituloDoJogo(String itadId) {
+        return gameRepository.findByItadId(itadId).map(Game::getTitle);
+    }
+
 }

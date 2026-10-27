@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.SmartLifecycle;
+import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
@@ -25,7 +26,7 @@ public class TelegramBot implements SmartLifecycle {
 
     private static final Logger log = LoggerFactory.getLogger(TelegramBot.class);
 
-    @Value("${telegram.bot.allowed-chat-id:}")
+    @Value("${telegram.bot.allowed-chat-id}")
     private String allowedChatId;
 
     private final TelegramService telegramService;
@@ -34,7 +35,7 @@ public class TelegramBot implements SmartLifecycle {
     private final CacheBuscas cacheBuscas;
     private final AlertaService alertaService;
 
-    private volatile boolean running;
+    private volatile boolean running = false;
     private Thread thread;
 
     private long lastUpdateId = 0;
@@ -156,6 +157,10 @@ public class TelegramBot implements SmartLifecycle {
         switch (command) {
             case "/start" -> telegramService.sendMessage(chatId, "Mensagem de teste", null);
             case "/add"   -> handleAdd(chatId, userId, text);
+            case "/list"  -> handleList(chatId, userId, message.path("from")
+                    .path("first_name")
+                    .asText(""));
+            case "/remove" -> handleRemove(chatId, userId);
             default -> { }
         }
     }
@@ -185,7 +190,46 @@ public class TelegramBot implements SmartLifecycle {
         cacheBuscas.guarda(Long.parseLong(chatId), messageId, jogos);
     }
 
-    private void handleCallback(JsonNode cb) {
+    private void handleList(String chatId, long userId, String firstName) {
+        List<GameMatch> jogos;
+        try {
+            jogos = alertaService.alertasDaPessoa(Long.parseLong(chatId), userId);
+        } catch (DataAccessException e) {
+            log.error("Falha ao listar alertas ({})", e.getClass().getSimpleName());
+            telegramService.sendMessage(chatId, "Não consegui buscar sua lista agora. Tente de novo em instantes.", null);
+            return;
+        }
+
+        if (jogos.isEmpty()) {
+            telegramService.sendMessage(chatId, "Você ainda não acompanha nenhum jogo. Use /add nome do jogo.", null);
+            return;
+        }
+
+        StringBuilder sb = new StringBuilder(firstName.isBlank() ? "Seus jogos:\n" : "Jogos de " + firstName + ":\n");
+        for (int i = 0; i < jogos.size(); i++) {
+            sb.append(i + 1).append(". ").append(jogos.get(i).nomeJogo()).append('\n');
+        }
+        telegramService.sendMessage(chatId, sb.toString(), null);
+    }
+
+    private void handleRemove(String chatId, long userId) {
+        List<GameMatch> jogos;
+        try {
+            jogos = alertaService.alertasDaPessoa(Long.parseLong(chatId), userId);
+        } catch (DataAccessException e) {
+            log.error("Falha ao listar alertas para remover ({})", e.getClass().getSimpleName());
+            telegramService.sendMessage(chatId, "Não consegui buscar sua lista agora. Tente de novo em instantes.", null);
+            return;
+        }
+        if (jogos.isEmpty()) {
+            telegramService.sendMessage(chatId, "Você não acompanha nenhum jogo.", null);
+            return;
+        }
+        telegramService.sendMessage(chatId, "Qual jogo você quer parar de acompanhar? (só quem pediu pode escolher)",
+                TecladoEscolhaJogo.montaRemocao(jogos, userId));
+    }
+
+    private void handleCallbackAdd(JsonNode cb) {
         String callbackId = cb.path("id").asText();
 
         Optional<CallbackAdd> parsed = CallbackAdd.parse(cb.path("data").asText());
@@ -215,13 +259,69 @@ public class TelegramBot implements SmartLifecycle {
         telegramService.answerCallbackQuery(callbackId, null);
 
         String username = from.hasNonNull("username") ? from.path("username").asText() : null;
-        AlertaService.Resultado resultado = alertaService.adiciona(
-                chatId, clickerId, from.path("first_name").asText(""), username, jogo.get());
+        AlertaService.Resultado resultado;
+        try {
+            resultado = alertaService.adiciona(
+                    chatId, clickerId, from.path("first_name").asText(""), username, jogo.get());
+        }catch (DataAccessException e) {
+            log.error("Falha ao gravar alerta ({})", e.getClass().getSimpleName());
+            telegramService.editMessageText(chat, messageId, "Não consegui salvar agora. Use /add de novo.");
+            return;
+        }
 
         String titulo = jogo.get().nomeJogo();
         String texto = resultado == AlertaService.Resultado.ADICIONADO
                 ? "Acompanhando: " + titulo
                 : "Você já acompanha: " + titulo;
         telegramService.editMessageText(chat, messageId, texto);
+    }
+
+    private void handleCallbackRemove(JsonNode cb) {
+        String callbackId = cb.path("id").asText();
+
+        Optional<CallbackRemove> parsed = CallbackRemove.parse(cb.path("data").asText());
+        if (parsed.isEmpty()) {
+            telegramService.answerCallbackQuery(callbackId, null);
+            return;
+        }
+        CallbackRemove rem = parsed.get();
+
+        long clickerId = cb.path("from").path("id").asLong();
+        if (clickerId != rem.userId()) {
+            telegramService.answerCallbackQuery(callbackId, "Só quem pediu pode escolher.");
+            return;
+        }
+        telegramService.answerCallbackQuery(callbackId, null);
+
+        long chatId = cb.path("message").path("chat").path("id").asLong();
+        long messageId = cb.path("message").path("message_id").asLong();
+        String chat = String.valueOf(chatId);
+
+        Optional<String> titulo;
+        boolean removido;
+        try {
+            titulo = alertaService.tituloDoJogo(rem.itadId());
+            removido = alertaService.remove(chatId, clickerId, rem.itadId());
+        } catch (DataAccessException e) {
+            log.error("Falha ao remover alerta ({})", e.getClass().getSimpleName());
+            telegramService.editMessageText(chat, messageId, "Não consegui remover agora. Use /remove de novo.");
+            return;
+        }
+
+        String nome = titulo.orElse("esse jogo");
+        String texto = removido
+                ? "Deixei de acompanhar " + nome + "."
+                : "Você já não acompanhava " + nome + ".";
+        telegramService.editMessageText(chat, messageId, texto);
+    }
+
+    private void handleCallback(JsonNode cb) {
+        String data = cb.path("data").asText("");
+        String prefixo = data.split(":", 2)[0];
+        switch (prefixo) {
+            case CallbackAdd.PREFIXO    -> handleCallbackAdd(cb);
+            case CallbackRemove.PREFIXO -> handleCallbackRemove(cb);
+            default -> telegramService.answerCallbackQuery(cb.path("id").asText(), null);
+        }
     }
 }
