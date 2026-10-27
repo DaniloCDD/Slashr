@@ -3,15 +3,9 @@ package com.slashr.bot;
 import java.util.Optional;
 import java.util.regex.Pattern;
 
-/*
- * Formato do callback_data dos botões do /add: add:<idDoJogo>:<idDoUsuário>.
- * Monta (formata) e lê (parse) no mesmo lugar, para o formato não ficar espalhado.
- * O parse nunca confia no que vem do cliente: fora do formato, devolve vazio e o clique é ignorado.
- * Cabe nos 64 bytes do Telegram (máx. 56), por isso o título não vai aqui.
- */
 public record CallbackAdd(String itadId, long userId) {
 
-    private static final String PREFIXO = "add";
+    public static final String PREFIXO = "add";
     private static final Pattern UUID_CANONICO =
             Pattern.compile("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$");
     public static String formata(String itadId, long userId) {
