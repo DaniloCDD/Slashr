@@ -26,6 +26,22 @@ public class TelegramBot implements SmartLifecycle {
 
     private static final Logger log = LoggerFactory.getLogger(TelegramBot.class);
 
+    // Mensagem do /start. Vai em HTML (sendHtml), por isso o "<" do exemplo é escrito como &lt;
+    private static final String MENSAGEM_START = """
+            Olá! Eu sou o <b>Slashr</b>.
+
+            Eu acompanho os preços dos seus jogos na Steam e aviso aqui no grupo quando algum entrar em promoção. \
+            Também comparo com o menor preço histórico para dizer se vale a pena comprar. \
+            
+            <b>Comandos:</b>
+            
+            /add &lt;nome do jogo&gt; — começa a acompanhar um jogo
+            /list — mostra os jogos que você acompanha
+            /remove — para de acompanhar um jogo
+            /start — mostra esta mensagem
+
+            <i>Dados by IsThereAnyDeal</i>""";
+
     @Value("${telegram.bot.allowed-chat-id}")
     private String allowedChatId;
 
@@ -155,7 +171,7 @@ public class TelegramBot implements SmartLifecycle {
         long userId = message.path("from").path("id").asLong();
 
         switch (command) {
-            case "/start" -> telegramService.sendMessage(chatId, "Mensagem de teste", null);
+            case "/start" -> telegramService.sendHtml(chatId, MENSAGEM_START);
             case "/add"   -> handleAdd(chatId, userId, text);
             case "/list"  -> handleList(chatId, userId, message.path("from")
                     .path("first_name")
