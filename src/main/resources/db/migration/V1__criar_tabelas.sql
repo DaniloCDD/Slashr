@@ -18,8 +18,3 @@ CREATE TABLE price_alerts (
 );
 
 CREATE INDEX idx_price_alerts_game ON price_alerts (game_id);
-
-CREATE TABLE bot_state (
-    nome   VARCHAR(50) PRIMARY KEY,
-    valor  BIGINT      NOT NULL
-);
