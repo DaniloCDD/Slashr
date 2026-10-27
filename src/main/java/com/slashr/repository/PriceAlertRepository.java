@@ -35,7 +35,7 @@ public interface PriceAlertRepository extends JpaRepository<PriceAlert, Long> {
        delete from PriceAlert a
        where a.chatId = :chatId and a.telegramUserId = :userId
          and a.game.id in (select g.id from Game g where g.itadId = :itadId)
-           """)
+       """)
     int removeAlerta(@Param("chatId") Long chatId,
                      @Param("userId") Long userId,
                      @Param("itadId") String itadId);
