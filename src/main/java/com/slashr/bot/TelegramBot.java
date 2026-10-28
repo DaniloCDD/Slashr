@@ -58,6 +58,7 @@ public class TelegramBot implements SmartLifecycle {
 
     @Override
     public void start() {
+        if (allowedChatId.isBlank()) log.warn("allowed-chat-id vazio: o bot vai ignorar todas as mensagens");
         running = true;
         thread = new Thread(this::loop, "telegram-polling");
         thread.setDaemon(true);
