@@ -3,11 +3,28 @@ services:
     image: postgres:16
     environment:
       POSTGRES_DB: slashr
-      POSTGRES_USER: slashr
-      POSTGRES_PASSWORD: slashr
+      POSTGRES_USER: ${BD_USERNAME}
+      POSTGRES_PASSWORD: ${BD_PASSWORD}
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${BD_USERNAME} -d slashr"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  app:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      BD_URL: ${BD_URL_NUVEM:-jdbc:postgresql://db:5432/slashr}
+    restart: unless-stopped
+
 volumes:
   pgdata:
