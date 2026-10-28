@@ -332,12 +332,31 @@ public class TelegramBot implements SmartLifecycle {
         telegramService.editMessageText(chat, messageId, texto);
     }
 
+    private void handleCallbackCancelar(JsonNode cb) {
+        String callbackId = cb.path("id").asText();
+        Optional<CallbackCancelar> parsed = CallbackCancelar.parse(cb.path("data").asText());
+        if (parsed.isEmpty()) {
+            telegramService.answerCallbackQuery(callbackId, null);
+            return;
+        }
+        if (cb.path("from").path("id").asLong() != parsed.get().userId()) {
+            telegramService.answerCallbackQuery(callbackId, "Só quem pediu pode cancelar.");
+            return;
+        }
+        telegramService.answerCallbackQuery(callbackId, null);
+        long chatId = cb.path("message").path("chat").path("id").asLong();
+        long messageId = cb.path("message").path("message_id").asLong();
+        cacheBuscas.remove(chatId, messageId);
+        telegramService.editMessageText(String.valueOf(chatId), messageId, "Cancelado.");
+    }
+
     private void handleCallback(JsonNode cb) {
         String data = cb.path("data").asText("");
         String prefixo = data.split(":", 2)[0];
         switch (prefixo) {
             case CallbackAdd.PREFIXO    -> handleCallbackAdd(cb);
             case CallbackRemove.PREFIXO -> handleCallbackRemove(cb);
+            case CallbackCancelar.PREFIXO -> handleCallbackCancelar(cb);
             default -> telegramService.answerCallbackQuery(cb.path("id").asText(), null);
         }
     }

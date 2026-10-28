@@ -15,20 +15,23 @@ public final class TecladoEscolhaJogo {
     private TecladoEscolhaJogo() {}
 
     public static Map<String, Object> monta(List<GameMatch> jogos, long userId) {
-        return monta(jogos, id -> CallbackAdd.formata(id, userId));
+        return monta(jogos,userId, id -> CallbackAdd.formata(id, userId));
     }
 
     public static Map<String, Object> montaRemocao(List<GameMatch> jogos, long userId) {
-        return monta(jogos, id -> CallbackRemove.formata(id, userId));
+        return monta(jogos,userId, id -> CallbackRemove.formata(id, userId));
     }
 
-    private static Map<String, Object> monta(List<GameMatch> jogos, Function<String, String> formatador) {
+    private static Map<String, Object> monta(List<GameMatch> jogos, long userId ,Function<String, String> formatador) {
         List<List<Map<String, Object>>> linhas = new ArrayList<>();
         for (GameMatch jogo : jogos) {
             linhas.add(List.of(Map.of(
                     "text", cortar(jogo.nomeJogo()),
                     "callback_data", formatador.apply(jogo.id()))));
         }
+        linhas.add(List.of(Map.of(
+                "text", "Cancelar",
+                "callback_data", CallbackCancelar.formata(userId))));
         return Map.of("inline_keyboard", linhas);
     }
 

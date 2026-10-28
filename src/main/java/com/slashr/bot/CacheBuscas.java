@@ -12,15 +12,11 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
-/*
- * Guarda em memória o resultado de cada /add, por mensagem de botões enviada.
- * O botão só leva o id do jogo (limite de 64 bytes), então o título vem daqui quando o clique volta.
- * Some se o app reiniciar e expira em 15 min; nos dois casos o clique cai em "busca expirou".
- */
+
 @Component
 public class CacheBuscas {
 
-    private static final Duration VALIDADE = Duration.ofMinutes(15);
+    private static final Duration VALIDADE = Duration.ofMinutes(10);
 
     private record Chave(long chatId, long messageId) {}
 
@@ -35,6 +31,10 @@ public class CacheBuscas {
 
     CacheBuscas(Clock relogio) {
         this.relogio = relogio;
+    }
+
+    public void remove(long chatId, long messageId) {
+        entradas.remove(new Chave(chatId, messageId));
     }
 
     public void guarda(long chatId, long messageId, List<GameMatch> jogos) {
