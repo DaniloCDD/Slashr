@@ -20,12 +20,13 @@ ele manda uma mensagem marcando a pessoa e dizendo se vale a pena comprar ou nã
 
 Toda lista de botões tem um botão **Cancelar**, e só quem pediu pode clicar nos botões.
 
-O bot confere os preços **de hora em hora**. Quando um jogo entra em promoção, ele compara o preço atual com o menor preço histórico e dá um veredito:
+O bot confere os preços **de hora em hora**. Quando um jogo entra em promoção, ele compara o preço atual com a faixa entre o menor preço histórico e o preço cheio, e dá um veredito:
 
-- 🟢 **Compre**: até 5% acima do menor preço histórico
-- 🟡 **Razoável**: entre 5% e 25% acima
-- 🔴 **Espere**: mais de 25% acima
+- 🟢 **Compre**: até 10% da faixa acima do menor preço histórico
+- 🟡 **Razoável**: entre 10% e 30% da faixa
+- 🔴 **Espere**: mais de 30% da faixa
 
+Exemplo: um jogo de R\$ 120,00 com menor histórico de R\$ 5,99 tem uma faixa de R\$ 114,01. Em promoção a R\$ 11,99, ele está a cerca de 5% da faixa, então o veredito é **Compre**.
 
 ## Explicação Pasta a Pasta
 
@@ -97,7 +98,7 @@ O bot confere os preços **de hora em hora**. Quando um jogo entra em promoção
 **1. Pré-requisitos**
 - Um bot criado no [@BotFather](https://t.me/BotFather) e uma chave da API do [IsThereAnyDeal](https://isthereanydeal.com/apps/my/)
 - **Para rodar com Docker:** Docker e Docker Compose
-- **Para rodar sem Docker:** Java 21 e PostgreSQL
+- **Para rodar sem Docker:** Java 21, Maven e PostgreSQL
 
 **2. Arquivo `.env`**
 

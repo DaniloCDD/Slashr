@@ -3,7 +3,6 @@ package com.slashr.service;
 import com.slashr.collector.Offer;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.text.NumberFormat;
 import java.util.Currency;
 import java.util.List;
@@ -33,9 +32,10 @@ public final class MensagemPromocao {
             sb.append("📉 Menor preço histórico: sem dados\n");
         } else {
             sb.append("📉 Menor preço histórico: ").append(dinheiro(menorHistorico, o.moeda())).append('\n');
-            Optional<Veredito> v = CalculadoraVeredito.calcula(o.preco(), menorHistorico);
+            Optional<Veredito> v = CalculadoraVeredito.calcula(o.preco(), menorHistorico, o.precoNormal());
             v.ifPresent(x -> sb.append(x.emoji()).append(" <b>").append(x.rotulo()).append("</b>")
-                    .append(" — ").append(distancia(o.preco(), menorHistorico)).append('\n'));
+                    .append(" — ").append(distancia(o.preco(), menorHistorico, o.moeda())).append('\n'));
+
         }
 
         sb.append("🔗 <a href=\"").append(escapa(o.url())).append("\">Ver no IsThereAnyDeal</a>\n");
@@ -52,12 +52,9 @@ public final class MensagemPromocao {
         return sb.toString();
     }
 
-    static String distancia(BigDecimal preco, BigDecimal menor) {
+    static String distancia(BigDecimal preco, BigDecimal menor, String moeda) {
         if (preco.compareTo(menor) <= 0) return "no menor preço histórico";
-        if (menor.signum() == 0) return "acima do menor histórico (grátis)";
-        BigDecimal pct = preco.subtract(menor).multiply(BigDecimal.valueOf(100))
-                .divide(menor, 0, RoundingMode.HALF_UP);
-        return pct.toPlainString() + "% acima do menor histórico";
+        return dinheiro(preco.subtract(menor), moeda) + " acima do menor histórico";
     }
 
     static String mencao(Mencao m) {

@@ -31,8 +31,15 @@ class MensagemPromocaoTest {
 
     @Test void mostraNumerosDoVeredito() {
         String msg = MensagemPromocao.formata(oferta("Hades", "u"), new BigDecimal("15.00"), List.of());
-        assertTrue(msg.contains("Razoável") || msg.contains("Espere"));
-        assertTrue(msg.contains("33% acima do menor histórico"));
+        assertTrue(msg.contains("Razoável"));
+        assertTrue(msg.contains("R$ 4,99 acima do menor histórico"));
+    }
+
+    @Test void promocaoBoaComMinimoExtremoEhCompre() {
+        Offer o = new Offer("id-2", "Borderlands 3", new BigDecimal("11.99"), new BigDecimal("120.00"), "BRL", 90, "u");
+        String msg = MensagemPromocao.formata(o, new BigDecimal("5.99"), List.of());
+        assertTrue(msg.contains("Compre"));
+        assertTrue(msg.contains("R$ 6,00 acima do menor histórico"));
     }
 
     @Test void semHistoricoNaoTemVeredito() {
