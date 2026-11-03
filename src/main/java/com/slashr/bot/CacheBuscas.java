@@ -13,6 +13,11 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 
+/**
+ * Guarda em memória os resultados da busca do /add.
+ * Evita consultar a API novamente quando o usuário escolhe o jogo.
+ * Entradas expiram em 10 minutos e são limpas a cada nova gravação.
+ */
 @Component
 public class CacheBuscas {
 

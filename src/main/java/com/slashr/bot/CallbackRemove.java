@@ -3,7 +3,10 @@ package com.slashr.bot;
 import java.util.Optional;
 import java.util.regex.Pattern;
 
-
+/**
+ * Payload do botão de escolha do /remove: "rem:<itadId>:<userId>".
+ * Mesmo formato do CallbackAdd.
+ */
 public record CallbackRemove(String itadId, long userId) {
 
     public static final String PREFIXO = "rem";

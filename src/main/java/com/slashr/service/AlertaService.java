@@ -12,11 +12,9 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Optional;
 
-/*
- * Grava o "quero acompanhar este jogo" vindo do clique no /add.
- * Idempotente: clique duplo ou update reprocessado não duplica nada (a restrição única do banco é a garantia final).
- * Sem @Transactional de propósito: cada chamada ao repository abre a sua transação, então a violação
- * de unicidade estoura na hora, onde dá para tratar, e não só no commit.
+/**
+ * Registra o alerta escolhido no /add. Idempotente: a restrição única do banco evita duplicados.
+ * Sem @Transactional de propósito, a violação de unicidade estoura em cada save, onde pode ser tratada
  */
 @Service
 @RequiredArgsConstructor
@@ -47,6 +45,7 @@ public class AlertaService {
             alertRepository.save(alerta);
             return Resultado.ADICIONADO;
         } catch (DataIntegrityViolationException e) {
+            //dois cliques ao mesmo tempo
             if (alertRepository.existeAlerta(chatId, userId, game.getItadId())) {
                 return Resultado.JA_EXISTIA;
             }

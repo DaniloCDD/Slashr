@@ -21,11 +21,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * Implementação do PriceCollector sobre a API do IsThereAnyDeal, restrita à loja Steam.
+ */
 @Component
 public class ItadPriceCollector implements PriceCollector {
 
     private static final String BASE_URL = "https://api.isthereanydeal.com";
     private static final int MAX_BUSCA = 10;
+    //Tamanho máximo de ids por requisição de preços.
     private static final int LOTE = 200;
 
     private final RestClient http;
@@ -98,6 +102,7 @@ public class ItadPriceCollector implements PriceCollector {
         return resultado;
     }
 
+    //Os métodos parse são estáticos e sem rede para poderem ser testados com JSON fixo
     static List<GameMatch> parseBusca(JsonNode root) {
         List<GameMatch> out = new ArrayList<>();
         if (root == null || !root.isArray()) return out;
@@ -147,6 +152,7 @@ public class ItadPriceCollector implements PriceCollector {
         return out;
     }
 
+    //O ITAD envia o valor int (amountInt, ex.: 1999); as casas decimais vêm da moeda.
     static BigDecimal dinheiro(JsonNode price) {
         if (price == null || !price.hasNonNull("amountInt")) return null;
         int casas = 2;
@@ -166,6 +172,7 @@ public class ItadPriceCollector implements PriceCollector {
         return out;
     }
 
+    //Converte falhas do RestClient em ItadException, sem expor a URL nem a chave de API nos logs.
     private static <T> T executa(java.util.function.Supplier<T> chamada) {
         try {
             return chamada.get();

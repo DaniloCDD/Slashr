@@ -19,28 +19,31 @@ import com.slashr.service.AlertaService;
 import java.util.List;
 import java.util.Optional;
 
-
+/**
+ * Entrada do Telegram: faz long polling (getUpdates) em uma thread própria(independente) e
+ * processa os comandos digitados e as interações com os menus do bot.
+ * Só atende o chat de telegram.bot.allowed-chat-id;
+ */
 @Component
 @RequiredArgsConstructor
 public class TelegramBot implements SmartLifecycle {
 
     private static final Logger log = LoggerFactory.getLogger(TelegramBot.class);
 
-    // Mensagem do /start. Vai em HTML (sendHtml), por isso o "<" do exemplo é escrito como &lt;
     private static final String MENSAGEM_START = """
-            Olá! Eu sou o <b>Slashr</b>.
+        Olá! Eu sou o <b>Slashr</b>.
 
-            Eu acompanho os preços dos seus jogos na Steam e aviso aqui no grupo quando algum entrar em promoção. \
-            Também comparo com o menor preço histórico para dizer se vale a pena comprar. \
-            
-            <b>Comandos:</b>
-            
-            /add &lt;nome do jogo&gt; — começa a acompanhar um jogo
-            /list — mostra os jogos que você acompanha
-            /remove — para de acompanhar um jogo
-            /start — mostra esta mensagem
+        Eu acompanho os preços dos seus jogos na Steam e aviso aqui no grupo quando algum entrar em promoção. \
+        Também comparo com o menor preço histórico para dizer se vale a pena comprar. \
+        
+        <b>Comandos:</b>
+        
+        /add &lt;nome do jogo&gt; — começa a acompanhar um jogo
+        /list — mostra os jogos que você acompanha
+        /remove — para de acompanhar um jogo
+        /start — mostra esta mensagem
 
-            <i>Dados by IsThereAnyDeal</i>""";
+        <i>Dados by IsThereAnyDeal</i>""";
 
     @Value("${telegram.bot.allowed-chat-id}")
     private String allowedChatId;
@@ -54,6 +57,9 @@ public class TelegramBot implements SmartLifecycle {
     private volatile boolean running = false;
     private Thread thread;
 
+    // Offset do polling.
+    // Fica só em memória, então, se reiniciar,
+    // updates não confirmados podem chegar de novo (os comandos são idempotentes, então não é um problema).
     private long lastUpdateId = 0;
 
     @Override
@@ -68,7 +74,7 @@ public class TelegramBot implements SmartLifecycle {
     @Override
     public void stop() {
         running = false;
-        thread.interrupt();
+        if (thread != null) thread.interrupt();
     }
 
     @Override
@@ -76,6 +82,11 @@ public class TelegramBot implements SmartLifecycle {
         return running;
     }
 
+    /**
+     * Loop de polling.
+     * Falhas usam backoff exponencial;
+     * 429 respeita o retry_after; 409 indica outra instância ou webhook.
+     */
     private void loop() {
         int falhas = 0;
         while (running) {
@@ -103,15 +114,18 @@ public class TelegramBot implements SmartLifecycle {
                     pausa(backoff(++falhas));
                 }
             } catch (RestClientException e) {
+                if (!running) break;
                 log.error("Falha de rede ({})", e.getClass().getSimpleName());
                 pausa(backoff(++falhas));
             } catch (Exception e) {
+                if (!running) break;
                 log.error("Erro inesperado no loop ({})", e.getClass().getSimpleName());
                 pausa(backoff(++falhas));
             }
         }
     }
 
+    //vai dobrando o número até 60 seg, 1,2, 4, 8, ...
     private long backoff(int falhas) {
         return Math.min(1000L << Math.min(falhas - 1, 6), 60_000L);
     }
@@ -135,6 +149,7 @@ public class TelegramBot implements SmartLifecycle {
         } catch (Exception e) {
             log.error("Falha ao tratar update {} ({})", id, e.getClass().getSimpleName());
         } finally {
+            //continua para não travar a fila
             lastUpdateId = id;
         }
     }
@@ -147,6 +162,7 @@ public class TelegramBot implements SmartLifecycle {
         }
     }
 
+    //Até o allowed-chat-id ser configurado, nao vai aceitar nada.
     private boolean chatPermitido(JsonNode update) {
         JsonNode msg = update.has("callback_query") ? update.path("callback_query").path("message")
                 : update.path("message");
@@ -167,6 +183,8 @@ public class TelegramBot implements SmartLifecycle {
         String text = message.path("text").asText().trim();
         log.info("Mensagem recebida de {}: {}", chatId, text);
 
+        //Em grupos o comando pode vir como "/add@NomeDoBot"
+        //remove o sufixo
         String command = text.split("\\s+")[0].split("@")[0].toLowerCase();
 
         long userId = message.path("from").path("id").asLong();
@@ -258,6 +276,7 @@ public class TelegramBot implements SmartLifecycle {
 
         JsonNode from = cb.path("from");
         long clickerId = from.path("id").asLong();
+        //Só quem pediu para adicionar pode escolher o jogo.
         if (clickerId != add.userId()) {
             telegramService.answerCallbackQuery(callbackId, "Só quem pediu pode escolher.");
             return;
@@ -268,6 +287,7 @@ public class TelegramBot implements SmartLifecycle {
         String chat = String.valueOf(chatId);
 
         Optional<GameMatch> jogo = cacheBuscas.acha(chatId, messageId, add.itadId());
+        //Busca expirada (depois dos 10 min de cache) ou bot reiniciado desde o /add.
         if (jogo.isEmpty()) {
             telegramService.answerCallbackQuery(callbackId, null);
             telegramService.editMessageText(chat, messageId, "Essa busca expirou. Use /add de novo.");
@@ -350,6 +370,8 @@ public class TelegramBot implements SmartLifecycle {
         telegramService.editMessageText(String.valueOf(chatId), messageId, "Cancelado.");
     }
 
+    // O prefixo do callback_data (add/rem/can) define a ação;
+    // um tipo por ação mantém a validação independente.
     private void handleCallback(JsonNode cb) {
         String data = cb.path("data").asText("");
         String prefixo = data.split(":", 2)[0];

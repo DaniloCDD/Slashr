@@ -7,7 +7,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-//é a "agenda", ele seta que horas o bot vai rodar
+/**
+ * Dispara a verificação de preços a cada hora cheia(13:00,14:00,...).
+ */
 @Component
 @RequiredArgsConstructor
 public class PrecoScheduler {
@@ -16,13 +18,12 @@ public class PrecoScheduler {
 
     private final VerificadorPrecos verificador;
 
-    //segundo 0, minuto 0 de toda hora
-    //o bot pode puxar o preço antes do ITAD pegar a promoção, isso atrasa 1 hora, mas tem problema não
     @Scheduled(cron = "0 0 * * * *", zone = "America/Maceio")
     public void roda() {
         try {
             verificador.verifica();
         } catch (Exception e) {
+            //Uma rodada com erro não pode cancelar as próximas.
             log.error("Erro na rodada de preços ({})", e.getClass().getSimpleName());
         }
     }

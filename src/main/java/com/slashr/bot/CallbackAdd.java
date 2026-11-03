@@ -3,6 +3,11 @@ package com.slashr.bot;
 import java.util.Optional;
 import java.util.regex.Pattern;
 
+
+/**
+ * Payload do botão de escolha do /add: "add:<itadId>:<userId>".
+ * como tem o userId, só permite clique de quem fez o pedido
+ */
 public record CallbackAdd(String itadId, long userId) {
 
     public static final String PREFIXO = "add";

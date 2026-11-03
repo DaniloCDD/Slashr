@@ -8,6 +8,9 @@ import lombok.Setter;
 
 import java.time.Instant;
 
+/**
+ * Pedido de uma pessoa, em um chat, para acompanhar um jogo.
+ */
 @Entity
 @Table(name = "price_alerts",
         uniqueConstraints = @UniqueConstraint(name = "uk_alerta_pessoa_jogo",
@@ -31,7 +34,9 @@ public class PriceAlert {
     @Column(name = "first_name", nullable = false)
     private String firstName;
 
-    /** @username do Telegram, sem o @. Nulo se a pessoa não tiver (aí a menção usa tg://user?id=). */
+    /**
+     * @username do Telegram, sem o @. Nulo se a pessoa não tiver (aí a menção usa tg://user?id=).
+     */
     @Column(length = 64)
     private String username;
 
@@ -39,9 +44,15 @@ public class PriceAlert {
     @JoinColumn(name = "game_id", nullable = false)
     private Game game;
 
+    /**
+     * Último preço avisado, em centavos. Nulo se nunca houve aviso.
+     */
     @Column(name = "last_notified_price_cents")
     private Integer lastNotifiedPriceCents;
 
+    /**
+     * Indica que já foi avisado a promoção em andamento, para não repetir o aviso.
+     */
     @Column(name = "on_sale", nullable = false)
     private boolean onSale;
 

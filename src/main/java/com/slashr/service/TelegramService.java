@@ -12,6 +12,9 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Cliente da Bot API do Telegram.
+ */
 @Service
 public class TelegramService {
 
@@ -22,11 +25,13 @@ public class TelegramService {
                 .connectTimeout(Duration.ofSeconds(10))
                 .build();
         var factory = new JdkClientHttpRequestFactory(httpClient);
+        // 40s = 30s do long polling (getUpdates) + 10s de folga. Um valor menor derrubaria a conexão antes da resposta.
         factory.setReadTimeout(Duration.ofSeconds(40));
         this.restClient = builder.baseUrl("https://api.telegram.org/bot" + token)
                 .requestFactory(factory).build();
     }
 
+    /** Long polling: o Telegram segura a resposta até 30s esperando novas mensagens. */
     public JsonNode getUpdates(long offset) {
         return restClient.get()
                 .uri("/getUpdates?offset={offset}&timeout={timeout}", offset, 30)
@@ -62,6 +67,7 @@ public class TelegramService {
                 .retrieve().toBodilessEntity();
     }
 
+    // Desativa a prévia de links para a mensagem de promoção não ficar poluída.
     public void sendHtml(String chatId, String html) {
         Map<String, Object> body = new HashMap<>();
         body.put("chat_id", chatId);

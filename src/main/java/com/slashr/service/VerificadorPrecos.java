@@ -22,16 +22,13 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-/*
- * Uma rodada do job de preços (quem chama de hora em hora é o PrecoScheduler).
- *
- * Regras que esta classe garante:
- *  - jogo ausente na resposta do ITAD = sem dados: não mexe no alerta;
- *  - ItadException (inclusive 429) = pula a rodada inteira;
- *  - o estado do alerta só é gravado DEPOIS que o Telegram aceitou a mensagem.
- *
- * Não é @Transactional de propósito: não queremos segurar uma conexão do banco
- * enquanto esperamos resposta de HTTP. Cada saveAll() abre a sua transação curta.
+/**
+ * Uma rodada de verificação de preços, chamada de hora em hora pelo PrecoScheduler.
+ * Garantias:
+ *  - jogo ausente na resposta do ITAD = sem dados: o alerta não é alterado;
+ *  - falha do ITAD (inclusive 429) pula a rodada inteira;
+ *  - o estado do alerta só é gravado depois que o Telegram aceita a mensagem.
+ * Não é @Transactional de propósito, para não segurar conexão do banco durante chamadas HTTP.
  */
 @Service
 @RequiredArgsConstructor
@@ -55,7 +52,7 @@ public class VerificadorPrecos {
         Map<String, List<PriceAlert>> porJogo = todos.stream()
                 .collect(Collectors.groupingBy(a -> a.getGame().getItadId(), LinkedHashMap::new, Collectors.toList()));
 
-        // 1) preços atuais (uma chamada por lote de ids)
+        // 1) preços atuais, em lote
         Map<String, Offer> ofertas;
         try {
             ofertas = coletor.precos(new ArrayList<>(porJogo.keySet())).stream()
@@ -65,21 +62,21 @@ public class VerificadorPrecos {
             return;
         }
 
-        // 2) decide, por alerta, o que fazer
+        /// 2) decide o que fazer com cada alerta
         List<PriceAlert> encerrar = new ArrayList<>();
         Map<String, List<PriceAlert>> aNotificar = new LinkedHashMap<>();
 
         for (var entrada : porJogo.entrySet()) {
             Offer oferta = ofertas.get(entrada.getKey());
             if (oferta == null) {
-                continue; // sem dados: não é "sem promoção", então não mexe no alerta
+                continue; // sem dados não é "sem promoção",então mantém o alerta
             }
             int cents = emCentavos(oferta.preco());
             for (PriceAlert a : entrada.getValue()) {
                 Acao acao = DecisaoAlerta.decide(a.isOnSale(), a.getLastNotifiedPriceCents(), oferta.desconto(), cents);
                 switch (acao) {
                     case ENCERRAR_PROMOCAO -> {
-                        // zera o estado para a PRÓXIMA promoção deste jogo voltar a avisar
+                        // zera o estado para a próxima promoção voltar a ser avisada
                         a.setOnSale(false);
                         a.setLastNotifiedPriceCents(null);
                         encerrar.add(a);
@@ -96,7 +93,7 @@ public class VerificadorPrecos {
             return;
         }
 
-        // 3) menor histórico só dos jogos que vamos avisar (poupa requisições do ITAD)
+        // 3) menor histórico só dos jogos que vamos avisar
         Map<String, BigDecimal> historico;
         try {
             historico = coletor.precoHistorico(new ArrayList<>(aNotificar.keySet()));
@@ -105,7 +102,7 @@ public class VerificadorPrecos {
             return;
         }
 
-        // 4) envia uma mensagem por jogo e por chat, mencionando todos os interessados
+        // 4) uma mensagem por jogo e chat, mencionando todos os interessados
         for (var entrada : aNotificar.entrySet()) {
             String itadId = entrada.getKey();
             Offer oferta = ofertas.get(itadId);
@@ -124,7 +121,7 @@ public class VerificadorPrecos {
                     telegram.sendHtml(chat.getKey(), html);
                 } catch (RestClientResponseException e) {
                     if (e.getStatusCode().value() == 429) {
-                        // limite do Telegram: para por aqui, o resto sai na próxima rodada
+                        // limite do Telegram: o restante sai na próxima rodada
                         log.warn("Telegram 429 ao enviar; o resto fica para a próxima rodada");
                         return;
                     }
@@ -136,7 +133,7 @@ public class VerificadorPrecos {
                     continue;
                 }
 
-                // só chega aqui se o envio deu certo; se falhou, nada é gravado
+                // envio confirmado: só agora o estado é gravado
                 int cents = emCentavos(oferta.preco());
                 for (PriceAlert a : destinatarios) {
                     a.setOnSale(true);
@@ -148,7 +145,7 @@ public class VerificadorPrecos {
         }
     }
 
-    // 19,99 vira 1999. Usa BigDecimal o tempo inteiro com double o arredondamento falharia.
+    // 19,99 vira 1999. BigDecimal evita os erros de arredondamento do double.
     static int emCentavos(BigDecimal preco) {
         return preco.movePointRight(2).setScale(0, RoundingMode.HALF_UP).intValueExact();
     }

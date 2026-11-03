@@ -11,6 +11,8 @@ import java.util.List;
 
 public interface PriceAlertRepository extends JpaRepository<PriceAlert, Long> {
 
+    // join fetch traz o jogo na mesma consulta;
+    // sem ele, o acesso a getGame() fora do repository daria erro(LazyInitializationException).
     @Query("select a from PriceAlert a join fetch a.game")
     List<PriceAlert> findAllComJogo();
 
@@ -21,6 +23,7 @@ public interface PriceAlertRepository extends JpaRepository<PriceAlert, Long> {
            """)
     List<PriceAlert> findDaPessoa(@Param("chatId") Long chatId, @Param("userId") Long userId);
 
+    // Verifica se a pessoa já acompanha o jogo.
     @Query("""
            select count(a) > 0 from PriceAlert a
            where a.chatId = :chatId and a.telegramUserId = :userId and a.game.itadId = :itadId
@@ -29,6 +32,8 @@ public interface PriceAlertRepository extends JpaRepository<PriceAlert, Long> {
                          @Param("userId") Long userId,
                          @Param("itadId") String itadId);
 
+
+    // Devolve quantos alertas foram removidos (0 = a pessoa já não acompanhava o jogo).
     @Transactional
     @Modifying
     @Query("""

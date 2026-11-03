@@ -6,6 +6,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+/**
+ * Jogo acompanhado. O itadId é o identificador do jogo no ITAD.
+ */
 @Entity
 @Table(name = "games")
 @Getter

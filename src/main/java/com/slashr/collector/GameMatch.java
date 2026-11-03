@@ -1,9 +1,8 @@
 package com.slashr.collector;
 
-/*
-* é o que o bot devolve que encontrou de acordo com o nome que o usuario sugeriu
-* vamos guardar no banco o ID
-* */
+/**
+ * Jogo encontrado na busca do ITAD. O id é o que fica salvo no banco.
+ */
 public record GameMatch(String id, String nomeJogo) {
 
 }

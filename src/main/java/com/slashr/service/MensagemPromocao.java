@@ -11,7 +11,9 @@ import java.util.Locale;
 import java.util.Optional;
 
 
-//só a formatação das msgs do bot
+/**
+ * Monta o texto HTML da mensagem de promoção enviada ao grupo.
+ */
 public final class MensagemPromocao {
 
     private static final Locale PT_BR = Locale.of("pt", "BR");
@@ -71,10 +73,12 @@ public final class MensagemPromocao {
         try {
             nf.setCurrency(Currency.getInstance(moeda));
         } catch (IllegalArgumentException | NullPointerException e) {
+            //Moeda desconhecida, então, vai manter o formato padrão do real.
         }
-        return nf.format(valor).replace(' ', ' ');
+        return nf.format(valor).replace('\u00A0', ' ');
     }
 
+    // Escapa os caracteres especiais do parse_mode HTML do Telegram.
     static String escapa(String s) {
         if (s == null) return "";
         return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;");

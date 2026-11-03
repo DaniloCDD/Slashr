@@ -2,7 +2,9 @@ package com.slashr.bot;
 
 import java.util.Optional;
 
-
+/**
+ * Payload do botão "Cancelar": "can:<userId>".
+ */
 public record CallbackCancelar(long userId) {
 
     public static final String PREFIXO = "can";

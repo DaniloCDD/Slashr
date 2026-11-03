@@ -8,6 +8,9 @@ import java.util.List;
 import java.util.Map;
 
 
+/**
+ * Monta um conjunto de botões interativos no Telegram: um botão por jogo, mais "Cancelar".
+ */
 public final class TecladoEscolhaJogo {
 
     private static final int MAX_TEXTO = 60;
@@ -35,6 +38,7 @@ public final class TecladoEscolhaJogo {
         return Map.of("inline_keyboard", linhas);
     }
 
+    //títulos longos são cortados em 60 caracteres
     private static String cortar(String titulo) {
         return titulo.length() <= MAX_TEXTO ? titulo : titulo.substring(0, MAX_TEXTO - 1) + "…";
     }

@@ -1,12 +1,9 @@
 package com.slashr.service;
 
-/*
- * Decide o que fazer com um alerta, dado o estado gravado e a oferta atual.
- * Função pura: sem banco, sem rede, fácil de testar.
- *
- * ENCERRAR_PROMOCAO existe para zerar o estado quando o desconto acaba;
- * sem isso, a próxima promoção do mesmo jogo nunca seria avisada.
- * Se o preço cair mais durante a mesma promoção, avisamos de novo (escolha de produto).
+/**
+ * Decide o que fazer com um alerta, dado o estado gravado e a oferta atual. Função pura, sem banco nem rede.
+ * ENCERRAR_PROMOCAO zera o estado quando o desconto acaba; sem isso, a próxima promoção não seria avisada.
+ * Se o preço cair mais durante a mesma promoção, avisa de novo.
  */
 public final class DecisaoAlerta {
 
