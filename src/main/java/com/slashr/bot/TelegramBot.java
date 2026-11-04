@@ -40,7 +40,7 @@ public class TelegramBot implements SmartLifecycle {
         
         /add &lt;nome do jogo&gt; — começa a acompanhar um jogo
         /list — mostra os jogos que você acompanha
-        /remove — para de acompanhar um jogo
+        /remove [nome] — para de acompanhar um jogo (o nome é opcional)
         /start — mostra esta mensagem
 
         <i>Dados by IsThereAnyDeal</i>""";
@@ -195,7 +195,7 @@ public class TelegramBot implements SmartLifecycle {
             case "/list"  -> handleList(chatId, userId, message.path("from")
                     .path("first_name")
                     .asText(""));
-            case "/remove" -> handleRemove(chatId, userId);
+            case "/remove" -> handleRemove(chatId, userId, text);
             default -> { }
         }
     }
@@ -247,7 +247,7 @@ public class TelegramBot implements SmartLifecycle {
         telegramService.sendMessage(chatId, sb.toString(), null);
     }
 
-    private void handleRemove(String chatId, long userId) {
+    private void handleRemove(String chatId, long userId, String text) {
         List<GameMatch> jogos;
         try {
             jogos = alertaService.alertasDaPessoa(Long.parseLong(chatId), userId);
@@ -259,6 +259,17 @@ public class TelegramBot implements SmartLifecycle {
         if (jogos.isEmpty()) {
             telegramService.sendMessage(chatId, "Você não acompanha nenhum jogo.", null);
             return;
+        }
+        String[] partes = text.split("\\s+", 2);
+        if (partes.length == 2 && !partes[1].isBlank()) {
+            String filtro = partes[1].trim().toLowerCase();
+            jogos = jogos.stream()
+                    .filter(j -> j.nomeJogo().toLowerCase().contains(filtro))
+                    .toList();
+            if (jogos.isEmpty()) {
+                telegramService.sendMessage(chatId, "Você não acompanha nenhum jogo com esse nome.", null);
+                return;
+            }
         }
         telegramService.sendMessage(chatId, "Qual jogo você quer parar de acompanhar? (só quem pediu pode escolher)",
                 TecladoEscolhaJogo.montaRemocao(jogos, userId));
